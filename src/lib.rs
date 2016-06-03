@@ -1,17 +1,17 @@
+extern crate num;
+
 use std::cmp::Eq;
-use std::ops::BitAnd;
-use std::ops::Index;
-use std::ops::Not;
-use std::ops::Shl;
+use std::ops::{BitAnd,Index,Not,Shl};
+use num::{One,Zero,Unsigned};
 
 pub struct BitVector<S = usize>
-    where S: Sized + BitAnd<S, Output = S> + Shl<S, Output = S> + Not + Eq + Zero + One + FromUSize + Copy {
+    where S: Sized + BitAnd<S, Output = S> + Shl<S, Output = S> + Not + Eq + Zero + One + Unsigned + FromUSize + Copy {
     data: Vec<S>,
     capacity: usize
 }
 
 impl<S> BitVector<S>
-    where S: Sized + BitAnd<S, Output = S> + Shl<S, Output = S> + Not + Eq + Zero + One + FromUSize + Copy {
+    where S: Sized + BitAnd<S, Output = S> + Shl<S, Output = S> + Not + Eq + Zero + One + Unsigned + FromUSize + Copy {
     pub fn with_capacity(capacity: usize) -> BitVector<S> {
         let len = (capacity / (std::mem::size_of::<S>() * 8)) + 1;
         BitVector { data: vec![S::zero(); len], capacity: capacity }
@@ -26,7 +26,7 @@ macro_rules! bool_ref {
 }
 
 impl<S> Index<usize> for BitVector<S>
-    where S: Sized + BitAnd<S, Output = S> + Shl<S, Output = S> + Not + Eq + Zero + One + FromUSize + Copy {
+    where S: Sized + BitAnd<S, Output = S> + Shl<S, Output = S> + Not + Eq + Zero + One + Unsigned + FromUSize + Copy {
     type Output = bool;
 
     fn index(&self, index: usize) -> &bool {
@@ -39,14 +39,6 @@ impl<S> Index<usize> for BitVector<S>
     }
 }
 
-pub trait Zero {
-    fn zero() -> Self;
-}
-
-pub trait One {
-    fn one() -> Self;
-}
-
 pub trait FromUSize {
     fn from_usize(value: usize) -> Self;
 }
@@ -54,18 +46,6 @@ pub trait FromUSize {
 macro_rules! impl_zero_one {
     ($($ty:ty),*) => {
         $(
-            impl Zero for $ty {
-                fn zero() -> $ty {
-                    0
-                }
-            }
-
-            impl One for $ty {
-                fn one() -> $ty {
-                    1
-                }
-            }
-
             impl FromUSize for $ty {
                 fn from_usize(value: usize) -> $ty {
                     value as $ty
