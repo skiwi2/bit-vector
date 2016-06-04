@@ -2,16 +2,16 @@ extern crate num;
 
 use std::cmp::Eq;
 use std::ops::{BitAnd,Index,Not,Shl};
-use num::{One,Zero,Unsigned};
+use num::{One,Zero,Unsigned,NumCast};
 
 pub struct BitVector<S = usize>
-    where S: Sized + BitAnd<S, Output = S> + Shl<S, Output = S> + Not + Eq + Zero + One + Unsigned + FromUSize + Copy {
+    where S: Sized + BitAnd<S, Output = S> + Shl<S, Output = S> + Not + Eq + Zero + One + Unsigned + NumCast + Copy {
     data: Vec<S>,
     capacity: usize
 }
 
 impl<S> BitVector<S>
-    where S: Sized + BitAnd<S, Output = S> + Shl<S, Output = S> + Not + Eq + Zero + One + Unsigned + FromUSize + Copy {
+    where S: Sized + BitAnd<S, Output = S> + Shl<S, Output = S> + Not + Eq + Zero + One + Unsigned + NumCast + Copy {
     pub fn with_capacity(capacity: usize) -> BitVector<S> {
         let len = (capacity / (std::mem::size_of::<S>() * 8)) + 1;
         BitVector { data: vec![S::zero(); len], capacity: capacity }
@@ -26,7 +26,7 @@ macro_rules! bool_ref {
 }
 
 impl<S> Index<usize> for BitVector<S>
-    where S: Sized + BitAnd<S, Output = S> + Shl<S, Output = S> + Not + Eq + Zero + One + Unsigned + FromUSize + Copy {
+    where S: Sized + BitAnd<S, Output = S> + Shl<S, Output = S> + Not + Eq + Zero + One + Unsigned + NumCast + Copy {
     type Output = bool;
 
     fn index(&self, index: usize) -> &bool {
@@ -34,33 +34,10 @@ impl<S> Index<usize> for BitVector<S>
         let remainder = index % (std::mem::size_of::<S>() * 8);
         // we know that remainder is always smaller or equal to the size that S can hold
         // for example if S = u8 then remainder <= 2^8 - 1
-        let remainder = S::from_usize(remainder);
+        //let remainder = S::from_usize(remainder);
+        let remainder: S = num::cast(remainder).unwrap();
         bool_ref!((self.data[data_index] & (S::one() << remainder)) != S::zero())
     }
-}
-
-pub trait FromUSize {
-    fn from_usize(value: usize) -> Self;
-}
-
-macro_rules! impl_zero_one {
-    ($($ty:ty),*) => {
-        $(
-            impl FromUSize for $ty {
-                fn from_usize(value: usize) -> $ty {
-                    value as $ty
-                }
-            }
-        )*
-    }
-}
-
-impl_zero_one! {
-    u8,
-    u16,
-    u32,
-    u64,
-    usize
 }
 
 #[cfg(test)]
