@@ -1,12 +1,12 @@
 extern crate num;
 
 use std::cmp::Eq;
-use std::ops::{BitAnd,Index,Not,Shl};
+use std::ops::{BitAnd,Index,Shl};
 use num::{One,Zero,Unsigned,NumCast};
 
-pub trait BitStorage: Sized + BitAnd<Self, Output = Self> + Shl<Self, Output = Self> + Not + Eq + Zero + One + Unsigned + NumCast + Copy {}
+pub trait BitStorage: Sized + BitAnd<Self, Output = Self> + Shl<Self, Output = Self> + Eq + Zero + One + Unsigned + NumCast + Copy {}
 
-impl<S> BitStorage for S where S: Sized + BitAnd<S, Output = S> + Shl<S, Output = S> + Not + Eq + Zero + One + Unsigned + NumCast + Copy {}
+impl<S> BitStorage for S where S: Sized + BitAnd<S, Output = S> + Shl<S, Output = S> + Eq + Zero + One + Unsigned + NumCast + Copy {}
 
 pub struct BitVector<S: BitStorage = usize> {
     data: Vec<S>,
