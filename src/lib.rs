@@ -4,14 +4,16 @@ use std::cmp::Eq;
 use std::ops::{BitAnd,Index,Not,Shl};
 use num::{One,Zero,Unsigned,NumCast};
 
-pub struct BitVector<S = usize>
-    where S: Sized + BitAnd<S, Output = S> + Shl<S, Output = S> + Not + Eq + Zero + One + Unsigned + NumCast + Copy {
+pub trait BitStorage: Sized + BitAnd<Self, Output = Self> + Shl<Self, Output = Self> + Not + Eq + Zero + One + Unsigned + NumCast + Copy {}
+
+impl<S> BitStorage for S where S: Sized + BitAnd<S, Output = S> + Shl<S, Output = S> + Not + Eq + Zero + One + Unsigned + NumCast + Copy {}
+
+pub struct BitVector<S: BitStorage = usize> {
     data: Vec<S>,
     capacity: usize
 }
 
-impl<S> BitVector<S>
-    where S: Sized + BitAnd<S, Output = S> + Shl<S, Output = S> + Not + Eq + Zero + One + Unsigned + NumCast + Copy {
+impl<S: BitStorage> BitVector<S> {
     pub fn with_capacity(capacity: usize) -> BitVector<S> {
         let len = (capacity / (std::mem::size_of::<S>() * 8)) + 1;
         BitVector { data: vec![S::zero(); len], capacity: capacity }
@@ -25,8 +27,7 @@ macro_rules! bool_ref {
     ($cond:expr) => (if $cond { &TRUE } else { &FALSE })
 }
 
-impl<S> Index<usize> for BitVector<S>
-    where S: Sized + BitAnd<S, Output = S> + Shl<S, Output = S> + Not + Eq + Zero + One + Unsigned + NumCast + Copy {
+impl<S: BitStorage> Index<usize> for BitVector<S> {
     type Output = bool;
 
     fn index(&self, index: usize) -> &bool {
@@ -34,7 +35,6 @@ impl<S> Index<usize> for BitVector<S>
         let remainder = index % (std::mem::size_of::<S>() * 8);
         // we know that remainder is always smaller or equal to the size that S can hold
         // for example if S = u8 then remainder <= 2^8 - 1
-        //let remainder = S::from_usize(remainder);
         let remainder: S = num::cast(remainder).unwrap();
         bool_ref!((self.data[data_index] & (S::one() << remainder)) != S::zero())
     }
