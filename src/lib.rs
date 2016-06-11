@@ -16,7 +16,7 @@ impl<S> BitStorage for S where S: Sized +
     Shl<S, Output = S> + 
     Eq + Zero + One + Unsigned + NumCast + Copy {}
 
-pub struct BitVector<S: BitStorage = usize> {
+pub struct BitVector<S: BitStorage> {
     data: Vec<S>,
     capacity: usize
 }
@@ -39,6 +39,10 @@ impl<S: BitStorage> BitVector<S> {
         let (data_index, remainder) = self.compute_data_index_and_remainder(index);
         let value = if value { S::one() } else { S::zero() };
         self.data[data_index] |= value << remainder;
+    }
+
+    pub fn capacity(&self) -> usize {
+        self.capacity
     }
 
     #[inline]
@@ -209,5 +213,14 @@ mod tests {
         let vec = BitVector::<u8>::with_capacity(16);
 
         vec[16];
+    }
+
+    #[test]
+    fn test_capacity() {
+        let vec_1000: BitVector<usize> = BitVector::with_capacity(1000);
+        assert_eq!(vec_1000.capacity(), 1000);
+
+        let vec_1024: BitVector<usize> = BitVector::with_capacity(1024);
+        assert_eq!(vec_1024.capacity(), 1024);
     }
 }
