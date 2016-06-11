@@ -18,13 +18,19 @@ impl<S> BitStorage for S where S: Sized +
 
 pub struct BitVector<S: BitStorage> {
     data: Vec<S>,
-    capacity: usize
+    capacity: usize,
+    storage_size: usize
 }
 
 impl<S: BitStorage> BitVector<S> {
     pub fn with_capacity(capacity: usize) -> BitVector<S> {
-        let len = (capacity / (std::mem::size_of::<S>() * 8)) + 1;
-        BitVector { data: vec![S::zero(); len], capacity: capacity }
+        let storage_size = std::mem::size_of::<S>() * 8;
+        let len = (capacity / storage_size) + 1;
+        BitVector { 
+            data: vec![S::zero(); len],
+            capacity: capacity,
+            storage_size: storage_size
+        }
     }
 
     pub fn get(&self, index: usize) -> Option<bool> {
@@ -53,8 +59,8 @@ impl<S: BitStorage> BitVector<S> {
 
     #[inline]
     fn compute_data_index_and_remainder(&self, index: usize) -> (usize, S) {
-        let data_index = index / (std::mem::size_of::<S>() * 8);
-        let remainder = index % (std::mem::size_of::<S>() * 8);
+        let data_index = index / self.storage_size;
+        let remainder = index % self.storage_size;
         // we know that remainder is always smaller or equal to the size that S can hold
         // for example if S = u8 then remainder <= 2^8 - 1
         let remainder: S = num::cast(remainder).unwrap();
