@@ -1,19 +1,35 @@
 extern crate num;
 
 use std::cmp::Eq;
-use std::ops::{BitAnd,BitOrAssign,Index,Shl};
+use std::ops::{BitAnd,BitAndAssign,BitOr,BitOrAssign,BitXor,BitXorAssign,Index,Not,Shl,ShlAssign,Shr,ShrAssign};
 use num::{One,Zero,Unsigned,NumCast};
 
-pub trait BitStorage: Sized + 
-    BitAnd<Self, Output = Self> + 
-    BitOrAssign<Self> + 
-    Shl<Self, Output = Self> + 
+pub trait BitStorage: Sized +
+    BitAnd<Self, Output = Self> +
+    BitAndAssign<Self> +
+    BitOr<Self, Output = Self> +
+    BitOrAssign<Self> +
+    BitXor<Self, Output = Self> +
+    BitXorAssign<Self> +
+    Not<Output = Self> +
+    Shl<Self, Output = Self> +
+    ShlAssign<Self> +
+    Shr<Self, Output = Self> +
+    ShrAssign<Self> +
     Eq + Zero + One + Unsigned + NumCast + Copy {}
 
-impl<S> BitStorage for S where S: Sized + 
-    BitAnd<S, Output = S> + 
-    BitOrAssign<S> + 
-    Shl<S, Output = S> + 
+impl<S> BitStorage for S where S: Sized +
+    BitAnd<S, Output = S> +
+    BitAndAssign<S> +
+    BitOr<S, Output = S> +
+    BitOrAssign<S> +
+    BitXor<S, Output = S> +
+    BitXorAssign<S> +
+    Not<Output = S> +
+    Shl<S, Output = S> +
+    ShlAssign<S> +
+    Shr<S, Output = S> +
+    ShrAssign<S> +
     Eq + Zero + One + Unsigned + NumCast + Copy {}
 
 pub struct BitVector<S: BitStorage> {
@@ -43,8 +59,12 @@ impl<S: BitStorage> BitVector<S> {
     pub fn set(&mut self, index: usize, value: bool) {
         self.panic_index_bounds(index);
         let (data_index, remainder) = self.compute_data_index_and_remainder(index);
-        let value = if value { S::one() } else { S::zero() };
-        self.data[data_index] |= value << remainder;
+        if value {
+            self.data[data_index] |= S::one() << remainder;
+        }
+        else {
+            self.data[data_index] &= !(S::one() << remainder);
+        }
     }
 
     pub fn capacity(&self) -> usize {
@@ -157,6 +177,35 @@ mod tests {
         assert_eq!(vec.get(13).unwrap(), false);
         assert_eq!(vec.get(14).unwrap(), false);
         assert_eq!(vec.get(15).unwrap(), true);
+    }
+
+    #[test]
+    fn test_repeated_set() {
+        let mut vec = BitVector::<u8>::with_capacity(16);
+
+        for i in 0..16 {
+            vec.set(i, false);
+        }
+
+        for i in 0..16 {
+            assert_eq!(vec[i], false);
+        }
+
+        for i in 0..16 {
+            vec.set(i, true);
+        }
+
+        for i in 0..16 {
+            assert_eq!(vec[i], true);
+        }
+
+        for i in 0..16 {
+            vec.set(i, false);
+        }
+
+        for i in 0..16 {
+            assert_eq!(vec[i], false);
+        }
     }
 
     #[test]
