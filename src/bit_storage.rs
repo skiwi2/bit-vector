@@ -28,4 +28,3 @@ impl<S> BitStorage for S where S: Sized +
     Shr<S, Output = S> +
     ShrAssign<S> +
     Eq + Zero + One + Unsigned + NumCast + Copy {}
-
