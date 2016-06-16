@@ -1,6 +1,7 @@
 extern crate num;
 
 use std::cmp::Eq;
+use std::marker::PhantomData;
 use std::ops::{BitAnd,BitAndAssign,BitOr,BitOrAssign,BitXor,BitXorAssign,Index,Not,Shl,ShlAssign,Shr,ShrAssign};
 use num::{One,Zero,Unsigned,NumCast};
 
@@ -44,17 +45,19 @@ pub struct BitVector<S: BitStorage> {
 }
 
 //TODO add storage_size() method with #inline -> will lead to constant after compilation
-pub struct BitSlice<S: BitStorage> {
+pub struct BitSlice<'a, S: BitStorage + 'a> {
     pointer: *const S,
     capacity: usize,
-    storage_size: usize
+    storage_size: usize,
+    phantom: PhantomData<&'a S>
 }
 
 //TODO add storage_size() method with #inline -> will lead to constant after compilation
-pub struct BitSliceMut<S: BitStorage> {
+pub struct BitSliceMut<'a, S: BitStorage + 'a> {
     pointer: *mut S,
     capacity: usize,
-    storage_size: usize
+    storage_size: usize,
+    phantom: PhantomData<&'a S>
 }
 
 impl<S: BitStorage> BitVector<S> {
@@ -99,12 +102,14 @@ impl<S: BitStorage> BitVector<S> {
         let left = BitSlice {
             pointer: data_left.as_ptr(),
             capacity: capacity_left,
-            storage_size: self.storage_size
+            storage_size: self.storage_size,
+            phantom: PhantomData
         };
         let right = BitSlice {
             pointer: data_right.as_ptr(),
             capacity: capacity_right,
-            storage_size: self.storage_size
+            storage_size: self.storage_size,
+            phantom: PhantomData
         };
         (left, right)
     }
@@ -118,12 +123,14 @@ impl<S: BitStorage> BitVector<S> {
         let left = BitSliceMut {
             pointer: data_left.as_mut_ptr(),
             capacity: capacity_left,
-            storage_size: self.storage_size
+            storage_size: self.storage_size,
+            phantom: PhantomData
         };
         let right = BitSliceMut {
             pointer: data_right.as_mut_ptr(),
             capacity: capacity_right,
-            storage_size: self.storage_size
+            storage_size: self.storage_size,
+            phantom: PhantomData
         };
         (left, right)
     }
@@ -196,7 +203,7 @@ impl<S: BitStorage> Index<usize> for BitVector<S> {
     }
 }
 
-impl<S: BitStorage> BitSlice<S> {
+impl<'a, S: BitStorage + 'a> BitSlice<'a, S> {
     pub fn get(&self, index: usize) -> Option<bool> {
         match self.index_in_bounds(index) {
             true => Some(self.get_unchecked(index)),
@@ -217,12 +224,14 @@ impl<S: BitStorage> BitSlice<S> {
         let left = BitSlice {
             pointer: pointer_left,
             capacity: capacity_left,
-            storage_size: self.storage_size
+            storage_size: self.storage_size,
+            phantom: PhantomData
         };
         let right = BitSlice {
             pointer: pointer_right,
             capacity: capacity_right,
-            storage_size: self.storage_size
+            storage_size: self.storage_size,
+            phantom: PhantomData
         };
         (left, right)
     }
@@ -287,7 +296,7 @@ impl<S: BitStorage> BitSlice<S> {
     }
 }
 
-impl<S: BitStorage> Index<usize> for BitSlice<S> {
+impl<'a, S: BitStorage + 'a> Index<usize> for BitSlice<'a, S> {
     type Output = bool;
 
     fn index(&self, index: usize) -> &bool {
@@ -296,7 +305,7 @@ impl<S: BitStorage> Index<usize> for BitSlice<S> {
     }
 }
 
-impl<S: BitStorage> BitSliceMut<S> {
+impl<'a, S: BitStorage + 'a> BitSliceMut<'a, S> {
     pub fn get(&self, index: usize) -> Option<bool> {
         match self.index_in_bounds(index) {
             true => Some(self.get_unchecked(index)),
@@ -333,12 +342,14 @@ impl<S: BitStorage> BitSliceMut<S> {
         let left = BitSlice {
             pointer: pointer_left,
             capacity: capacity_left,
-            storage_size: self.storage_size
+            storage_size: self.storage_size,
+            phantom: PhantomData
         };
         let right = BitSlice {
             pointer: pointer_right,
             capacity: capacity_right,
-            storage_size: self.storage_size
+            storage_size: self.storage_size,
+            phantom: PhantomData
         };
         (left, right)
     }
@@ -352,12 +363,14 @@ impl<S: BitStorage> BitSliceMut<S> {
         let left = BitSliceMut {
             pointer: pointer_left,
             capacity: capacity_left,
-            storage_size: self.storage_size
+            storage_size: self.storage_size,
+            phantom: PhantomData
         };
         let right = BitSliceMut {
             pointer: pointer_right,
             capacity: capacity_right,
-            storage_size: self.storage_size
+            storage_size: self.storage_size,
+            phantom: PhantomData
         };
         (left, right)
     }
@@ -429,7 +442,7 @@ impl<S: BitStorage> BitSliceMut<S> {
     }
 }
 
-impl<S: BitStorage> Index<usize> for BitSliceMut<S> {
+impl<'a, S: BitStorage + 'a> Index<usize> for BitSliceMut<'a, S> {
     type Output = bool;
 
     fn index(&self, index: usize) -> &bool {
@@ -671,43 +684,45 @@ mod tests_bitvector {
         vec.set(14, false);
         vec.set(15, true);
 
-        let (mut left, mut right) = vec.split_at_mut(8);
+        {
+            let (mut left, mut right) = vec.split_at_mut(8);
 
-        assert_eq!(left[0], true);
-        assert_eq!(left[1], false);
-        assert_eq!(left[2], true);
-        assert_eq!(left[3], false);
-        assert_eq!(left[4], true);
-        assert_eq!(left[5], false);
-        assert_eq!(left[6], true);
-        assert_eq!(left[7], true);
+            assert_eq!(left[0], true);
+            assert_eq!(left[1], false);
+            assert_eq!(left[2], true);
+            assert_eq!(left[3], false);
+            assert_eq!(left[4], true);
+            assert_eq!(left[5], false);
+            assert_eq!(left[6], true);
+            assert_eq!(left[7], true);
 
-        assert_eq!(right[0], true);
-        assert_eq!(right[1], false);
-        assert_eq!(right[2], false);
-        assert_eq!(right[3], false);
-        assert_eq!(right[4], true);
-        assert_eq!(right[5], false);
-        assert_eq!(right[6], false);
-        assert_eq!(right[7], true);
+            assert_eq!(right[0], true);
+            assert_eq!(right[1], false);
+            assert_eq!(right[2], false);
+            assert_eq!(right[3], false);
+            assert_eq!(right[4], true);
+            assert_eq!(right[5], false);
+            assert_eq!(right[6], false);
+            assert_eq!(right[7], true);
 
-        left.set(0, false);
-        left.set(1, true);
-        left.set(2, false);
-        left.set(3, true);
-        left.set(4, false);
-        left.set(5, true);
-        left.set(6, false);
-        left.set(7, false);
+            left.set(0, false);
+            left.set(1, true);
+            left.set(2, false);
+            left.set(3, true);
+            left.set(4, false);
+            left.set(5, true);
+            left.set(6, false);
+            left.set(7, false);
 
-        right.set(0, false);
-        right.set(1, true);
-        right.set(2, true);
-        right.set(3, true);
-        right.set(4, false);
-        right.set(5, true);
-        right.set(6, true);
-        right.set(7, false);
+            right.set(0, false);
+            right.set(1, true);
+            right.set(2, true);
+            right.set(3, true);
+            right.set(4, false);
+            right.set(5, true);
+            right.set(6, true);
+            right.set(7, false);
+        }
 
         assert_eq!(vec[0], false);
         assert_eq!(vec[1], true);
@@ -739,9 +754,8 @@ mod tests_bitvector {
 mod tests_bitslice {
     use super::{BitSlice,BitVector};
 
-    fn create_bitslice_u8_16() -> BitSlice<u8> {
-        let vec_8_32: BitVector<u8> = BitVector::with_capacity(32);
-        let (_, right) = vec_8_32.split_at(16);
+    fn create_bitslice_u8_16_from_bitvector_u8_32(vec: &BitVector<u8>) -> BitSlice<u8> {
+        let (_, right) = vec.split_at(16);
         right
     }
 
@@ -799,7 +813,8 @@ mod tests_bitslice {
 
     #[test]
     fn test_get_out_of_bounds() {
-        let slice = create_bitslice_u8_16();
+        let vec_8_32: BitVector<u8> = BitVector::with_capacity(32);
+        let slice = create_bitslice_u8_16_from_bitvector_u8_32(&vec_8_32);
 
         assert_eq!(slice.get(16), None);
     }
@@ -807,14 +822,16 @@ mod tests_bitslice {
     #[test]
     #[should_panic]
     fn test_index_out_of_bounds() {
-        let slice = create_bitslice_u8_16();
+        let vec_8_32: BitVector<u8> = BitVector::with_capacity(32);
+        let slice = create_bitslice_u8_16_from_bitvector_u8_32(&vec_8_32);
 
         slice[16];
     }
 
     #[test]
     fn test_capacity() {
-        let slice = create_bitslice_u8_16();
+        let vec_8_32: BitVector<u8> = BitVector::with_capacity(32);
+        let slice = create_bitslice_u8_16_from_bitvector_u8_32(&vec_8_32);
         assert_eq!(slice.capacity(), 16);
     }
 
@@ -877,7 +894,8 @@ mod tests_bitslice {
     #[test]
     #[should_panic]
     fn test_split_at_not_on_storage_bound() {
-        let slice = create_bitslice_u8_16();
+        let vec_8_32: BitVector<u8> = BitVector::with_capacity(32);
+        let slice = create_bitslice_u8_16_from_bitvector_u8_32(&vec_8_32);
         slice.split_at(4);
     }
 }
@@ -886,9 +904,8 @@ mod tests_bitslice {
 mod tests_bitslicemut {
     use super::{BitSliceMut,BitVector};
 
-    fn create_bitslice_mut_u8_16() -> BitSliceMut<u8> {
-        let mut vec_8_32: BitVector<u8> = BitVector::with_capacity(32);
-        let (_, right) = vec_8_32.split_at_mut(16);
+    fn create_bitslice_mut_u8_16_from_bitvector_u8_32(vec: &mut BitVector<u8>) -> BitSliceMut<u8> {
+        let (_, right) = vec.split_at_mut(16);
         right
     }
 
@@ -946,7 +963,8 @@ mod tests_bitslicemut {
 
     #[test]
     fn test_get_set() {
-        let mut slice = create_bitslice_mut_u8_16();
+        let mut vec_8_32: BitVector<u8> = BitVector::with_capacity(32);
+        let mut slice = create_bitslice_mut_u8_16_from_bitvector_u8_32(&mut vec_8_32);
 
         slice.set(0, true);
         slice.set(1, false);
@@ -985,7 +1003,8 @@ mod tests_bitslicemut {
 
     #[test]
     fn test_repeated_set() {
-        let mut slice = create_bitslice_mut_u8_16();
+        let mut vec_8_32: BitVector<u8> = BitVector::with_capacity(32);
+        let mut slice = create_bitslice_mut_u8_16_from_bitvector_u8_32(&mut vec_8_32);
 
         for i in 0..16 {
             slice.set(i, false);
@@ -1014,7 +1033,8 @@ mod tests_bitslicemut {
 
     #[test]
     fn test_get_out_of_bounds() {
-        let slice = create_bitslice_mut_u8_16();
+        let mut vec_8_32: BitVector<u8> = BitVector::with_capacity(32);
+        let slice = create_bitslice_mut_u8_16_from_bitvector_u8_32(&mut vec_8_32);
 
         assert_eq!(slice.get(16), None);
     }
@@ -1022,14 +1042,16 @@ mod tests_bitslicemut {
     #[test]
     #[should_panic]
     fn test_set_out_of_bounds() {
-        let mut slice = create_bitslice_mut_u8_16();
+        let mut vec_8_32: BitVector<u8> = BitVector::with_capacity(32);
+        let mut slice = create_bitslice_mut_u8_16_from_bitvector_u8_32(&mut vec_8_32);
 
         slice.set(16, true);    
     }
 
     #[test]
     fn test_index() {
-        let mut slice = create_bitslice_mut_u8_16();
+        let mut vec_8_32: BitVector<u8> = BitVector::with_capacity(32);
+        let mut slice = create_bitslice_mut_u8_16_from_bitvector_u8_32(&mut vec_8_32);
 
         slice.set(0, true);
         slice.set(1, false);
@@ -1069,20 +1091,23 @@ mod tests_bitslicemut {
     #[test]
     #[should_panic]
     fn test_index_out_of_bounds() {
-        let slice = create_bitslice_mut_u8_16();
+        let mut vec_8_32: BitVector<u8> = BitVector::with_capacity(32);
+        let slice = create_bitslice_mut_u8_16_from_bitvector_u8_32(&mut vec_8_32);
 
         slice[16];
     }
 
     #[test]
     fn test_capacity() {
-        let slice = create_bitslice_mut_u8_16();
+        let mut vec_8_32: BitVector<u8> = BitVector::with_capacity(32);
+        let slice = create_bitslice_mut_u8_16_from_bitvector_u8_32(&mut vec_8_32);
         assert_eq!(slice.capacity(), 16);
     }
 
     #[test]
     fn test_split_at() {
-        let mut slice = create_bitslice_mut_u8_16();
+        let mut vec_8_32: BitVector<u8> = BitVector::with_capacity(32);
+        let mut slice = create_bitslice_mut_u8_16_from_bitvector_u8_32(&mut vec_8_32);
 
         slice.set(0, true);
         slice.set(1, false);
@@ -1125,13 +1150,15 @@ mod tests_bitslicemut {
     #[test]
     #[should_panic]
     fn test_split_at_not_on_storage_bound() {
-        let slice = create_bitslice_mut_u8_16();
+        let mut vec_8_32: BitVector<u8> = BitVector::with_capacity(32);
+        let slice = create_bitslice_mut_u8_16_from_bitvector_u8_32(&mut vec_8_32);
         slice.split_at(4);
     }
 
     #[test]
     fn test_split_at_mut() {
-        let mut slice = create_bitslice_mut_u8_16();
+        let mut vec_8_32: BitVector<u8> = BitVector::with_capacity(32);
+        let mut slice = create_bitslice_mut_u8_16_from_bitvector_u8_32(&mut vec_8_32);
 
         slice.set(0, true);
         slice.set(1, false);
@@ -1150,43 +1177,45 @@ mod tests_bitslicemut {
         slice.set(14, false);
         slice.set(15, true);
 
-        let (mut left, mut right) = slice.split_at_mut(8);
+        {
+            let (mut left, mut right) = slice.split_at_mut(8);
 
-        assert_eq!(left[0], true);
-        assert_eq!(left[1], false);
-        assert_eq!(left[2], true);
-        assert_eq!(left[3], false);
-        assert_eq!(left[4], true);
-        assert_eq!(left[5], false);
-        assert_eq!(left[6], true);
-        assert_eq!(left[7], true);
+            assert_eq!(left[0], true);
+            assert_eq!(left[1], false);
+            assert_eq!(left[2], true);
+            assert_eq!(left[3], false);
+            assert_eq!(left[4], true);
+            assert_eq!(left[5], false);
+            assert_eq!(left[6], true);
+            assert_eq!(left[7], true);
 
-        assert_eq!(right[0], true);
-        assert_eq!(right[1], false);
-        assert_eq!(right[2], false);
-        assert_eq!(right[3], false);
-        assert_eq!(right[4], true);
-        assert_eq!(right[5], false);
-        assert_eq!(right[6], false);
-        assert_eq!(right[7], true);
+            assert_eq!(right[0], true);
+            assert_eq!(right[1], false);
+            assert_eq!(right[2], false);
+            assert_eq!(right[3], false);
+            assert_eq!(right[4], true);
+            assert_eq!(right[5], false);
+            assert_eq!(right[6], false);
+            assert_eq!(right[7], true);
 
-        left.set(0, false);
-        left.set(1, true);
-        left.set(2, false);
-        left.set(3, true);
-        left.set(4, false);
-        left.set(5, true);
-        left.set(6, false);
-        left.set(7, false);
+            left.set(0, false);
+            left.set(1, true);
+            left.set(2, false);
+            left.set(3, true);
+            left.set(4, false);
+            left.set(5, true);
+            left.set(6, false);
+            left.set(7, false);
 
-        right.set(0, false);
-        right.set(1, true);
-        right.set(2, true);
-        right.set(3, true);
-        right.set(4, false);
-        right.set(5, true);
-        right.set(6, true);
-        right.set(7, false);
+            right.set(0, false);
+            right.set(1, true);
+            right.set(2, true);
+            right.set(3, true);
+            right.set(4, false);
+            right.set(5, true);
+            right.set(6, true);
+            right.set(7, false);
+        }
 
         assert_eq!(slice[0], false);
         assert_eq!(slice[1], true);
@@ -1209,7 +1238,8 @@ mod tests_bitslicemut {
     #[test]
     #[should_panic]
     fn test_split_at_mut_not_on_storage_bound() {
-        let mut slice = create_bitslice_mut_u8_16();
+        let mut vec_8_32: BitVector<u8> = BitVector::with_capacity(32);
+        let mut slice = create_bitslice_mut_u8_16_from_bitvector_u8_32(&mut vec_8_32);
         slice.split_at_mut(4);
     }
 }
