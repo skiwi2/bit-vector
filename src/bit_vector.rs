@@ -1,6 +1,5 @@
 use num;
 
-use std::mem;
 use std::ops::Index;
 
 use BitStorage;
@@ -12,30 +11,17 @@ use FALSE;
 
 //TODO wait on custom DST on stable and deref BitVector into BitSlice resp BitSliceMut and implement non-structural changing methods on BitSlice/BitSliceMut
 
-//TODO add storage_size() method with #inline -> will lead to constant after compilation
 pub struct BitVector<S: BitStorage> {
     data: Vec<S>,
-    capacity: usize,
-    storage_size: usize
-}
-
-impl<S: BitStorage> Index<usize> for BitVector<S> {
-    type Output = bool;
-
-    fn index(&self, index: usize) -> &bool {
-        self.panic_index_bounds(index);
-        bool_ref!(self.get_unchecked(index))
-    }
+    capacity: usize
 }
 
 impl<S: BitStorage> BitVector<S> {
     pub fn with_capacity(capacity: usize) -> BitVector<S> {
-        let storage_size = mem::size_of::<S>() * 8;
-        let len = (capacity / storage_size) + 1;
+        let len = (capacity / S::storage_size()) + 1;
         BitVector { 
             data: vec![S::zero(); len],
-            capacity: capacity,
-            storage_size: storage_size
+            capacity: capacity
         }
     }
 
@@ -68,8 +54,8 @@ impl<S: BitStorage> BitVector<S> {
         let (data_left, data_right) = self.data.split_at(data_index);
 
         unsafe {
-            let left = BitSlice::from_pointer(data_left.as_ptr(), capacity_left, self.storage_size);
-            let right = BitSlice::from_pointer(data_right.as_ptr(), capacity_right, self.storage_size);
+            let left = BitSlice::from_pointer(data_left.as_ptr(), capacity_left);
+            let right = BitSlice::from_pointer(data_right.as_ptr(), capacity_right);
             (left, right)
         }
     }
@@ -81,8 +67,8 @@ impl<S: BitStorage> BitVector<S> {
         let (data_left, data_right) = self.data.split_at_mut(data_index);
 
         unsafe {
-            let left = BitSliceMut::from_pointer(data_left.as_mut_ptr(), capacity_left, self.storage_size);
-            let right = BitSliceMut::from_pointer(data_right.as_mut_ptr(), capacity_right, self.storage_size);
+            let left = BitSliceMut::from_pointer(data_left.as_mut_ptr(), capacity_left);
+            let right = BitSliceMut::from_pointer(data_right.as_mut_ptr(), capacity_right);
             (left, right)
         }
     }
@@ -102,12 +88,12 @@ impl<S: BitStorage> BitVector<S> {
 
     #[inline]
     fn compute_data_index(&self, index: usize) -> usize {
-        index / self.storage_size
+        index / S::storage_size()
     }
 
     #[inline]
     fn compute_data_remainder(&self, index: usize) -> S {
-        let remainder = index % self.storage_size;
+        let remainder = index % S::storage_size();
         // we know that remainder is always smaller or equal to the size that S can hold
         // for example if S = u8 then remainder <= 2^8 - 1
         let remainder: S = num::cast(remainder).unwrap();
@@ -133,9 +119,18 @@ impl<S: BitStorage> BitVector<S> {
 
     #[inline]
     fn panic_index_not_on_storage_bound(&self, index: usize) {
-        if index % self.storage_size != 0 {
-            panic!("Index not on storage bound. Storage size = {}, Index = {}", self.storage_size, index);
+        if index % S::storage_size() != 0 {
+            panic!("Index not on storage bound. Storage size = {}, Index = {}", S::storage_size(), index);
         }
+    }
+}
+
+impl<S: BitStorage> Index<usize> for BitVector<S> {
+    type Output = bool;
+
+    fn index(&self, index: usize) -> &bool {
+        self.panic_index_bounds(index);
+        bool_ref!(self.get_unchecked(index))
     }
 }
 

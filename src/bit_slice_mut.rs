@@ -10,20 +10,17 @@ use BitSlice;
 use TRUE;
 use FALSE;
 
-//TODO add storage_size() method with #inline -> will lead to constant after compilation
 pub struct BitSliceMut<'a, S: BitStorage + 'a> {
     pointer: *mut S,
     capacity: usize,
-    storage_size: usize,
     phantom: PhantomData<&'a S>
 }
 
 impl<'a, S: BitStorage + 'a> BitSliceMut<'a, S> {
-    pub unsafe fn from_pointer(pointer: *mut S, capacity: usize, storage_size: usize) -> BitSliceMut<'a, S> {
+    pub unsafe fn from_pointer(pointer: *mut S, capacity: usize) -> BitSliceMut<'a, S> {
         BitSliceMut {
             pointer: pointer,
             capacity: capacity,
-            storage_size: storage_size,
             phantom: PhantomData
         }
     }
@@ -62,8 +59,8 @@ impl<'a, S: BitStorage + 'a> BitSliceMut<'a, S> {
         let (pointer_left, pointer_right) = self.compute_pointers(data_index);
 
         unsafe {
-            let left = BitSlice::from_pointer(pointer_left, capacity_left, self.storage_size);
-            let right = BitSlice::from_pointer(pointer_right, capacity_right, self.storage_size);
+            let left = BitSlice::from_pointer(pointer_left, capacity_left);
+            let right = BitSlice::from_pointer(pointer_right, capacity_right);
             (left, right)
         }
     }
@@ -75,8 +72,8 @@ impl<'a, S: BitStorage + 'a> BitSliceMut<'a, S> {
         let (pointer_left, pointer_right) = self.compute_mut_pointers(data_index);
 
         unsafe {
-            let left = BitSliceMut::from_pointer(pointer_left, capacity_left, self.storage_size);
-            let right = BitSliceMut::from_pointer(pointer_right, capacity_right, self.storage_size);
+            let left = BitSliceMut::from_pointer(pointer_left, capacity_left);
+            let right = BitSliceMut::from_pointer(pointer_right, capacity_right);
             (left, right)
         }
     }
@@ -97,12 +94,12 @@ impl<'a, S: BitStorage + 'a> BitSliceMut<'a, S> {
 
     #[inline]
     fn compute_data_index(&self, index: usize) -> usize {
-        index / self.storage_size
+        index / S::storage_size()
     }
 
     #[inline]
     fn compute_data_remainder(&self, index: usize) -> S {
-        let remainder = index % self.storage_size;
+        let remainder = index % S::storage_size();
         // we know that remainder is always smaller or equal to the size that S can hold
         // for example if S = u8 then remainder <= 2^8 - 1
         let remainder: S = num::cast(remainder).unwrap();
@@ -142,8 +139,8 @@ impl<'a, S: BitStorage + 'a> BitSliceMut<'a, S> {
 
     #[inline]
     fn panic_index_not_on_storage_bound(&self, index: usize) {
-        if index % self.storage_size != 0 {
-            panic!("Index not on storage bound. Storage size = {}, Index = {}", self.storage_size, index);
+        if index % S::storage_size() != 0 {
+            panic!("Index not on storage bound. Storage size = {}, Index = {}", S::storage_size(), index);
         }
     }
 }
@@ -161,8 +158,6 @@ impl<'a, S: BitStorage + 'a> Index<usize> for BitSliceMut<'a, S> {
 mod tests {
     use super::super::{BitSliceMut,BitVector};
 
-    use std;
-
     fn create_bitslice_mut_u8_16_from_bitvector_u8_32(vec: &mut BitVector<u8>) -> BitSliceMut<u8> {
         let (_, right) = vec.split_at_mut(16);
         right
@@ -171,7 +166,7 @@ mod tests {
     #[test]
     fn test_from_pointer() {
         let mut vec: Vec<u8> = vec![0b11001111, 0b01001001];
-        let slice = unsafe { BitSliceMut::from_pointer(vec.as_mut_ptr(), 16, std::mem::size_of::<u8>() * 8) };
+        let slice = unsafe { BitSliceMut::from_pointer(vec.as_mut_ptr(), 16) };
 
         assert_eq!(slice[0], true);
         assert_eq!(slice[1], true);

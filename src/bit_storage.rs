@@ -1,3 +1,4 @@
+use std::mem;
 use std::ops::{BitAnd,BitAndAssign,BitOr,BitOrAssign,BitXor,BitXorAssign,Not,Shl,ShlAssign,Shr,ShrAssign};
 use num::{One,Zero,Unsigned,NumCast};
 
@@ -13,7 +14,9 @@ pub trait BitStorage: Sized +
     ShlAssign<Self> +
     Shr<Self, Output = Self> +
     ShrAssign<Self> +
-    Eq + Zero + One + Unsigned + NumCast + Copy {}
+    Eq + Zero + One + Unsigned + NumCast + Copy {
+        fn storage_size() -> usize;
+    }
 
 impl<S> BitStorage for S where S: Sized +
     BitAnd<S, Output = S> +
@@ -27,4 +30,9 @@ impl<S> BitStorage for S where S: Sized +
     ShlAssign<S> +
     Shr<S, Output = S> +
     ShrAssign<S> +
-    Eq + Zero + One + Unsigned + NumCast + Copy {}
+    Eq + Zero + One + Unsigned + NumCast + Copy {
+        #[inline]
+        fn storage_size() -> usize {
+            mem::size_of::<S>() * 8
+        }
+    }
