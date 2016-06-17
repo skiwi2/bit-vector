@@ -5,7 +5,7 @@ use bit_vector::BitVector;
 
 #[test]
 fn test_parallel_immutable() {
-	let mut vec: BitVector<u8> = BitVector::with_capacity(32);
+	let mut vec: BitVector<u8> = BitVector::with_capacity(32, false);
 
 	vec.set(0, true);
 	vec.set(1, true);
@@ -107,7 +107,7 @@ fn test_parallel_immutable() {
 
 #[test]
 fn test_parallel_mutable() {
-	let mut vec: BitVector<u8> = BitVector::with_capacity(32);
+	let mut vec: BitVector<u8> = BitVector::with_capacity(32, false);
 
 	{
 		let (mut left, mut right) = vec.split_at_mut(16);

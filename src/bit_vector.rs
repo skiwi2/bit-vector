@@ -17,10 +17,11 @@ pub struct BitVector<S: BitStorage> {
 }
 
 impl<S: BitStorage> BitVector<S> {
-    pub fn with_capacity(capacity: usize) -> BitVector<S> {
+    pub fn with_capacity(capacity: usize, default: bool) -> BitVector<S> {
         let len = (capacity / S::storage_size()) + 1;
+        let default = if default { S::max_value() } else { S::zero() };
         BitVector { 
-            data: vec![S::zero(); len],
+            data: vec![default; len],
             capacity: capacity
         }
     }
@@ -142,25 +143,40 @@ mod tests {
     fn test_with_capacity() {
         //TODO rewrite range checks to use iter
 
-        let vec_32_32 = BitVector::<u32>::with_capacity(32);
+        let vec_32_32_false = BitVector::<u32>::with_capacity(32, false);
         for i in 0..32 {
-            assert_eq!(vec_32_32[i], false);
+            assert_eq!(vec_32_32_false[i], false);
         }
 
-        let vec_32_1024 = BitVector::<u32>::with_capacity(1024);
+        let vec_32_1024_false = BitVector::<u32>::with_capacity(1024, false);
         for i in 0..1024 {
-            assert_eq!(vec_32_1024[i], false);
+            assert_eq!(vec_32_1024_false[i], false);
         }
 
-        let vec_32_1000 = BitVector::<u32>::with_capacity(1000);
+        let vec_32_1000_false = BitVector::<u32>::with_capacity(1000, false);
         for i in 0..1000 {
-            assert_eq!(vec_32_1000[i], false);
+            assert_eq!(vec_32_1000_false[i], false);
+        }
+
+        let vec_32_32_true = BitVector::<u32>::with_capacity(32, true);
+        for i in 0..32 {
+            assert_eq!(vec_32_32_true[i], true);
+        }
+
+        let vec_32_1024_true = BitVector::<u32>::with_capacity(1024, true);
+        for i in 0..1024 {
+            assert_eq!(vec_32_1024_true[i], true);
+        }
+
+        let vec_32_1000_true = BitVector::<u32>::with_capacity(1000, true);
+        for i in 0..1000 {
+            assert_eq!(vec_32_1000_true[i], true);
         }
     }
 
     #[test]
     fn test_get_set() {
-        let mut vec = BitVector::<u8>::with_capacity(16);
+        let mut vec = BitVector::<u8>::with_capacity(16, false);
 
         vec.set(0, true);
         vec.set(1, false);
@@ -199,7 +215,7 @@ mod tests {
 
     #[test]
     fn test_repeated_set() {
-        let mut vec = BitVector::<u8>::with_capacity(16);
+        let mut vec = BitVector::<u8>::with_capacity(16, false);
 
         for i in 0..16 {
             vec.set(i, false);
@@ -228,7 +244,7 @@ mod tests {
 
     #[test]
     fn test_get_out_of_bounds() {
-        let vec = BitVector::<u8>::with_capacity(16);
+        let vec = BitVector::<u8>::with_capacity(16, false);
 
         assert_eq!(vec.get(16), None);
     }
@@ -236,14 +252,14 @@ mod tests {
     #[test]
     #[should_panic]
     fn test_set_out_of_bounds() {
-        let mut vec = BitVector::<u8>::with_capacity(16);
+        let mut vec = BitVector::<u8>::with_capacity(16, false);
 
         vec.set(16, true);    
     }
 
     #[test]
     fn test_index() {
-        let mut vec = BitVector::<u8>::with_capacity(16);
+        let mut vec = BitVector::<u8>::with_capacity(16, false);
 
         vec.set(0, true);
         vec.set(1, false);
@@ -283,23 +299,23 @@ mod tests {
     #[test]
     #[should_panic]
     fn test_index_out_of_bounds() {
-        let vec = BitVector::<u8>::with_capacity(16);
+        let vec = BitVector::<u8>::with_capacity(16, false);
 
         vec[16];
     }
 
     #[test]
     fn test_capacity() {
-        let vec_1000: BitVector<usize> = BitVector::with_capacity(1000);
+        let vec_1000: BitVector<usize> = BitVector::with_capacity(1000, false);
         assert_eq!(vec_1000.capacity(), 1000);
 
-        let vec_1024: BitVector<usize> = BitVector::with_capacity(1024);
+        let vec_1024: BitVector<usize> = BitVector::with_capacity(1024, false);
         assert_eq!(vec_1024.capacity(), 1024);
     }
 
     #[test]
     fn test_split_at() {
-        let mut vec = BitVector::<u8>::with_capacity(16);
+        let mut vec = BitVector::<u8>::with_capacity(16, false);
 
         vec.set(0, true);
         vec.set(1, false);
@@ -342,13 +358,13 @@ mod tests {
     #[test]
     #[should_panic]
     fn test_split_at_not_on_storage_bound() {
-        let vec = BitVector::<u8>::with_capacity(16);
+        let vec = BitVector::<u8>::with_capacity(16, false);
         vec.split_at(4);
     }
 
     #[test]
     fn test_split_at_mut() {
-        let mut vec = BitVector::<u8>::with_capacity(16);
+        let mut vec = BitVector::<u8>::with_capacity(16, false);
 
         vec.set(0, true);
         vec.set(1, false);
@@ -428,7 +444,7 @@ mod tests {
     #[test]
     #[should_panic]
     fn test_split_at_mut_not_on_storage_bound() {
-        let mut vec = BitVector::<u8>::with_capacity(16);
+        let mut vec = BitVector::<u8>::with_capacity(16, false);
         vec.split_at_mut(4);
     }
 }

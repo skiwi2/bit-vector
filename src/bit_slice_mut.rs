@@ -192,7 +192,7 @@ mod tests {
 
     #[test]
     fn test_index_bits_already_set() {
-        let mut vec_8_32: BitVector<u8> = BitVector::with_capacity(32);
+        let mut vec_8_32: BitVector<u8> = BitVector::with_capacity(32, false);
 
         vec_8_32.set(1, true);
         vec_8_32.set(3, true);
@@ -244,7 +244,7 @@ mod tests {
 
     #[test]
     fn test_get_set() {
-        let mut vec_8_32: BitVector<u8> = BitVector::with_capacity(32);
+        let mut vec_8_32: BitVector<u8> = BitVector::with_capacity(32, false);
         let mut slice = create_bitslice_mut_u8_16_from_bitvector_u8_32(&mut vec_8_32);
 
         slice.set(0, true);
@@ -284,7 +284,7 @@ mod tests {
 
     #[test]
     fn test_repeated_set() {
-        let mut vec_8_32: BitVector<u8> = BitVector::with_capacity(32);
+        let mut vec_8_32: BitVector<u8> = BitVector::with_capacity(32, false);
         let mut slice = create_bitslice_mut_u8_16_from_bitvector_u8_32(&mut vec_8_32);
 
         for i in 0..16 {
@@ -314,7 +314,7 @@ mod tests {
 
     #[test]
     fn test_get_out_of_bounds() {
-        let mut vec_8_32: BitVector<u8> = BitVector::with_capacity(32);
+        let mut vec_8_32: BitVector<u8> = BitVector::with_capacity(32, false);
         let slice = create_bitslice_mut_u8_16_from_bitvector_u8_32(&mut vec_8_32);
 
         assert_eq!(slice.get(16), None);
@@ -323,7 +323,7 @@ mod tests {
     #[test]
     #[should_panic]
     fn test_set_out_of_bounds() {
-        let mut vec_8_32: BitVector<u8> = BitVector::with_capacity(32);
+        let mut vec_8_32: BitVector<u8> = BitVector::with_capacity(32, false);
         let mut slice = create_bitslice_mut_u8_16_from_bitvector_u8_32(&mut vec_8_32);
 
         slice.set(16, true);    
@@ -331,7 +331,7 @@ mod tests {
 
     #[test]
     fn test_index() {
-        let mut vec_8_32: BitVector<u8> = BitVector::with_capacity(32);
+        let mut vec_8_32: BitVector<u8> = BitVector::with_capacity(32, false);
         let mut slice = create_bitslice_mut_u8_16_from_bitvector_u8_32(&mut vec_8_32);
 
         slice.set(0, true);
@@ -372,7 +372,7 @@ mod tests {
     #[test]
     #[should_panic]
     fn test_index_out_of_bounds() {
-        let mut vec_8_32: BitVector<u8> = BitVector::with_capacity(32);
+        let mut vec_8_32: BitVector<u8> = BitVector::with_capacity(32, false);
         let slice = create_bitslice_mut_u8_16_from_bitvector_u8_32(&mut vec_8_32);
 
         slice[16];
@@ -380,14 +380,14 @@ mod tests {
 
     #[test]
     fn test_capacity() {
-        let mut vec_8_32: BitVector<u8> = BitVector::with_capacity(32);
+        let mut vec_8_32: BitVector<u8> = BitVector::with_capacity(32, false);
         let slice = create_bitslice_mut_u8_16_from_bitvector_u8_32(&mut vec_8_32);
         assert_eq!(slice.capacity(), 16);
     }
 
     #[test]
     fn test_split_at() {
-        let mut vec_8_32: BitVector<u8> = BitVector::with_capacity(32);
+        let mut vec_8_32: BitVector<u8> = BitVector::with_capacity(32, false);
         let mut slice = create_bitslice_mut_u8_16_from_bitvector_u8_32(&mut vec_8_32);
 
         slice.set(0, true);
@@ -431,14 +431,14 @@ mod tests {
     #[test]
     #[should_panic]
     fn test_split_at_not_on_storage_bound() {
-        let mut vec_8_32: BitVector<u8> = BitVector::with_capacity(32);
+        let mut vec_8_32: BitVector<u8> = BitVector::with_capacity(32, false);
         let slice = create_bitslice_mut_u8_16_from_bitvector_u8_32(&mut vec_8_32);
         slice.split_at(4);
     }
 
     #[test]
     fn test_split_at_mut() {
-        let mut vec_8_32: BitVector<u8> = BitVector::with_capacity(32);
+        let mut vec_8_32: BitVector<u8> = BitVector::with_capacity(32, false);
         let mut slice = create_bitslice_mut_u8_16_from_bitvector_u8_32(&mut vec_8_32);
 
         slice.set(0, true);
@@ -519,7 +519,7 @@ mod tests {
     #[test]
     #[should_panic]
     fn test_split_at_mut_not_on_storage_bound() {
-        let mut vec_8_32: BitVector<u8> = BitVector::with_capacity(32);
+        let mut vec_8_32: BitVector<u8> = BitVector::with_capacity(32, false);
         let mut slice = create_bitslice_mut_u8_16_from_bitvector_u8_32(&mut vec_8_32);
         slice.split_at_mut(4);
     }

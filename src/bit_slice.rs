@@ -154,7 +154,7 @@ mod tests {
 
     #[test]
     fn test_index_bits_already_set() {
-        let mut vec_8_32: BitVector<u8> = BitVector::with_capacity(32);
+        let mut vec_8_32: BitVector<u8> = BitVector::with_capacity(32, false);
 
         vec_8_32.set(1, true);
         vec_8_32.set(3, true);
@@ -206,7 +206,7 @@ mod tests {
 
     #[test]
     fn test_get_out_of_bounds() {
-        let vec_8_32: BitVector<u8> = BitVector::with_capacity(32);
+        let vec_8_32: BitVector<u8> = BitVector::with_capacity(32, false);
         let slice = create_bitslice_u8_16_from_bitvector_u8_32(&vec_8_32);
 
         assert_eq!(slice.get(16), None);
@@ -215,7 +215,7 @@ mod tests {
     #[test]
     #[should_panic]
     fn test_index_out_of_bounds() {
-        let vec_8_32: BitVector<u8> = BitVector::with_capacity(32);
+        let vec_8_32: BitVector<u8> = BitVector::with_capacity(32, false);
         let slice = create_bitslice_u8_16_from_bitvector_u8_32(&vec_8_32);
 
         slice[16];
@@ -223,14 +223,14 @@ mod tests {
 
     #[test]
     fn test_capacity() {
-        let vec_8_32: BitVector<u8> = BitVector::with_capacity(32);
+        let vec_8_32: BitVector<u8> = BitVector::with_capacity(32, false);
         let slice = create_bitslice_u8_16_from_bitvector_u8_32(&vec_8_32);
         assert_eq!(slice.capacity(), 16);
     }
 
     #[test]
     fn test_split_at() {
-        let mut vec_8_32: BitVector<u8> = BitVector::with_capacity(32);
+        let mut vec_8_32: BitVector<u8> = BitVector::with_capacity(32, false);
 
         vec_8_32.set(1, true);
         vec_8_32.set(3, true);
@@ -287,7 +287,7 @@ mod tests {
     #[test]
     #[should_panic]
     fn test_split_at_not_on_storage_bound() {
-        let vec_8_32: BitVector<u8> = BitVector::with_capacity(32);
+        let vec_8_32: BitVector<u8> = BitVector::with_capacity(32, false);
         let slice = create_bitslice_u8_16_from_bitvector_u8_32(&vec_8_32);
         slice.split_at(4);
     }
