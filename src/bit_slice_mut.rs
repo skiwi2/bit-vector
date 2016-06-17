@@ -16,6 +16,9 @@ pub struct BitSliceMut<'a, S: BitStorage + 'a> {
     phantom: PhantomData<&'a S>
 }
 
+unsafe impl<'a, S: BitStorage + 'a> Send for BitSliceMut<'a, S> {}
+unsafe impl<'a, S: BitStorage + 'a> Sync for BitSliceMut<'a, S> {}
+
 impl<'a, S: BitStorage + 'a> BitSliceMut<'a, S> {
     pub unsafe fn from_pointer(pointer: *mut S, capacity: usize) -> BitSliceMut<'a, S> {
         BitSliceMut {

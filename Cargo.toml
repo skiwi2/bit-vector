@@ -5,3 +5,6 @@ authors = ["skiwi <frank_skiwi@hotmail.com>"]
 
 [dependencies]
 num = "0.1.32"
+
+[dev-dependencies]
+crossbeam = "0.2.9"

@@ -14,6 +14,9 @@ pub struct BitSlice<'a, S: BitStorage + 'a> {
     phantom: PhantomData<&'a S>
 }
 
+unsafe impl<'a, S: BitStorage + 'a> Send for BitSlice<'a, S> {}
+unsafe impl<'a, S: BitStorage + 'a> Sync for BitSlice<'a, S> {}
+
 impl<'a, S: BitStorage + 'a> BitSlice<'a, S> {
     pub unsafe fn from_pointer(pointer: *const S, capacity: usize) -> BitSlice<'a, S> {
         BitSlice {
