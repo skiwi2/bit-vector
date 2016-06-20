@@ -74,9 +74,23 @@ impl<S: BitStorage> BitVector<S> {
         }
     }
 
+    pub fn iter(&self) -> Iter<S> {
+        Iter {
+            data: &self.data,
+            capacity: self.capacity,
+            data_index_counter: 0,
+            remainder_counter: 0
+        }
+    }
+
     #[inline]
     fn get_unchecked(&self, index: usize) -> bool {
         let (data_index, remainder) = self.compute_data_index_and_remainder(index);
+        self.get_unchecked_by_data_index_and_remainder(data_index, remainder)
+    }
+
+    #[inline]
+    fn get_unchecked_by_data_index_and_remainder(&self, data_index: usize, remainder: S) -> bool {
         (self.data[data_index] & (S::one() << remainder)) != S::zero()
     }
 
@@ -135,43 +149,78 @@ impl<S: BitStorage> Index<usize> for BitVector<S> {
     }
 }
 
+impl<'a, S: BitStorage + 'a> IntoIterator for &'a BitVector<S> {
+    type Item = bool;
+    type IntoIter = Iter<'a, S>;
+
+    fn into_iter(self) -> Iter<'a, S> {
+        self.iter()
+    }
+}
+
+pub struct Iter<'a, S: BitStorage + 'a> {
+    data: &'a Vec<S>,
+    capacity: usize,
+    data_index_counter: usize,
+    remainder_counter: usize
+}
+
+impl<'a, S: BitStorage + 'a> Iterator for Iter<'a, S> {
+    type Item = bool;
+
+    fn next(&mut self) -> Option<bool> {
+        let remainder: S = num::cast(self.remainder_counter).unwrap();
+        let next = self.get_unchecked_by_data_index_and_remainder(self.data_index_counter, remainder);
+
+        if self.calculate_index() == self.capacity {
+            return None;
+        }
+
+        self.remainder_counter += 1;
+        if self.remainder_counter == S::storage_size() {
+            self.remainder_counter = 0;
+            self.data_index_counter += 1;
+        }
+
+        Some(next)
+    }
+}
+
+impl<'a, S: BitStorage + 'a> Iter<'a, S> {
+    #[inline]
+    fn get_unchecked_by_data_index_and_remainder(&self, data_index: usize, remainder: S) -> bool {
+        (self.data[data_index] & (S::one() << remainder)) != S::zero()
+    }
+
+    #[inline]
+    fn calculate_index(&self) -> usize {
+        (self.data_index_counter * S::storage_size()) + self.remainder_counter
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::BitVector;
 
     #[test]
     fn test_with_capacity() {
-        //TODO rewrite range checks to use iter
-
         let vec_32_32_false = BitVector::<u32>::with_capacity(32, false);
-        for i in 0..32 {
-            assert_eq!(vec_32_32_false[i], false);
-        }
+        assert!(vec_32_32_false.iter().all(|x| !x));
 
         let vec_32_1024_false = BitVector::<u32>::with_capacity(1024, false);
-        for i in 0..1024 {
-            assert_eq!(vec_32_1024_false[i], false);
-        }
+        assert!(vec_32_1024_false.iter().all(|x| !x));
 
         let vec_32_1000_false = BitVector::<u32>::with_capacity(1000, false);
-        for i in 0..1000 {
-            assert_eq!(vec_32_1000_false[i], false);
-        }
+        assert!(vec_32_1000_false.iter().all(|x| !x));
 
         let vec_32_32_true = BitVector::<u32>::with_capacity(32, true);
-        for i in 0..32 {
-            assert_eq!(vec_32_32_true[i], true);
-        }
+        assert!(vec_32_32_true.iter().all(|x| x));
 
         let vec_32_1024_true = BitVector::<u32>::with_capacity(1024, true);
-        for i in 0..1024 {
-            assert_eq!(vec_32_1024_true[i], true);
-        }
+        assert!(vec_32_1024_true.iter().all(|x| x));
 
         let vec_32_1000_true = BitVector::<u32>::with_capacity(1000, true);
-        for i in 0..1000 {
-            assert_eq!(vec_32_1000_true[i], true);
-        }
+        assert!(vec_32_1000_true.iter().all(|x| x));
     }
 
     #[test]
@@ -446,5 +495,69 @@ mod tests {
     fn test_split_at_mut_not_on_storage_bound() {
         let mut vec = BitVector::<u8>::with_capacity(16, false);
         vec.split_at_mut(4);
+    }
+
+    #[test]
+    fn test_iter() {
+        let mut vec_8_4 = BitVector::<u8>::with_capacity(4, false);
+        vec_8_4.set(0, true);
+        vec_8_4.set(3, true);
+
+        let vec_8_4_iter_vec: Vec<_> = vec_8_4.iter().collect();
+        assert_eq!(vec_8_4_iter_vec, [true, false, false, true]);
+
+        let mut vec_8_8 = BitVector::<u8>::with_capacity(8, false);
+        vec_8_8.set(0, true);
+        vec_8_8.set(3, true);
+        vec_8_8.set(4, true);
+        vec_8_8.set(6, true);
+
+        let vec_8_8_iter_vec: Vec<_> = vec_8_8.iter().collect();
+        assert_eq!(vec_8_8_iter_vec, [true, false, false, true, true, false, true, false]);
+
+        let mut vec_8_16 = BitVector::<u8>::with_capacity(16, false);
+        vec_8_16.set(0, true);
+        vec_8_16.set(3, true);
+        vec_8_16.set(4, true);
+        vec_8_16.set(6, true);
+        vec_8_16.set(9, true);
+        vec_8_16.set(10, true);
+        vec_8_16.set(11, true);
+        vec_8_16.set(13, true);
+
+        let vec_8_16_iter_vec: Vec<_> = vec_8_16.iter().collect();
+        assert_eq!(vec_8_16_iter_vec, [true, false, false, true, true, false, true, false, false, true, true, true, false, true, false, false]);
+    }
+
+    #[test]
+    fn test_into_iter_on_reference() {
+        let mut vec_8_4 = BitVector::<u8>::with_capacity(4, false);
+        vec_8_4.set(0, true);
+        vec_8_4.set(3, true);
+
+        let vec_8_4_iter_vec: Vec<_> = (&vec_8_4).into_iter().collect();
+        assert_eq!(vec_8_4_iter_vec, [true, false, false, true]);
+
+        let mut vec_8_8 = BitVector::<u8>::with_capacity(8, false);
+        vec_8_8.set(0, true);
+        vec_8_8.set(3, true);
+        vec_8_8.set(4, true);
+        vec_8_8.set(6, true);
+
+        let vec_8_8_iter_vec: Vec<_> = (&vec_8_8).into_iter().collect();
+        assert_eq!(vec_8_8_iter_vec, [true, false, false, true, true, false, true, false]);
+
+        let mut vec_8_16 = BitVector::<u8>::with_capacity(16, false);
+        vec_8_16.set(0, true);
+        vec_8_16.set(3, true);
+        vec_8_16.set(4, true);
+        vec_8_16.set(6, true);
+        vec_8_16.set(9, true);
+        vec_8_16.set(10, true);
+        vec_8_16.set(11, true);
+        vec_8_16.set(13, true);
+
+        let vec_8_16_iter_vec: Vec<_> = (&vec_8_16).into_iter().collect();
+        assert_eq!(vec_8_16_iter_vec, [true, false, false, true, true, false, true, false, false, true, true, true, false, true, false, false]);
     }
 }
