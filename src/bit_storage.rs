@@ -16,7 +16,7 @@ pub trait BitStorage: Sized +
     ShrAssign<Self> +
     Eq + Zero + One + Unsigned + NumCast + Bounded + Copy {
         fn storage_size() -> usize;
-    }
+}
 
 impl<S> BitStorage for S where S: Sized +
     BitAnd<S, Output = S> +
@@ -35,4 +35,14 @@ impl<S> BitStorage for S where S: Sized +
         fn storage_size() -> usize {
             mem::size_of::<S>() * 8
         }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::BitStorage;
+
+    #[test]
+    fn test_storage_size() {
+        assert_eq!(u8::storage_size(), 8);
     }
+}
