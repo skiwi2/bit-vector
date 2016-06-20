@@ -81,9 +81,24 @@ impl<'a, S: BitStorage + 'a> BitSliceMut<'a, S> {
         }
     }
 
+    pub fn iter(&self) -> Iter<S> {
+        Iter {
+            pointer: self.pointer,
+            capacity: self.capacity,
+            data_index_counter: 0,
+            remainder_counter: 0,
+            phantom: PhantomData
+        }
+    }
+
     #[inline]
     fn get_unchecked(&self, index: usize) -> bool {
         let (data_index, remainder) = self.compute_data_index_and_remainder(index);
+        self.get_unchecked_by_data_index_and_remainder(data_index, remainder)
+    }
+
+    #[inline]
+    fn get_unchecked_by_data_index_and_remainder(&self, data_index: usize, remainder: S) -> bool {
         let element = unsafe { *self.pointer.offset(data_index as isize) };
         (element & (S::one() << remainder)) != S::zero()
     }
@@ -154,6 +169,60 @@ impl<'a, S: BitStorage + 'a> Index<usize> for BitSliceMut<'a, S> {
     fn index(&self, index: usize) -> &bool {
         self.panic_index_bounds(index);
         bool_ref!(self.get_unchecked(index))
+    }
+}
+
+pub struct Iter<'a, S: BitStorage + 'a> {
+    pointer: *mut S,
+    capacity: usize,
+    data_index_counter: usize,
+    remainder_counter: usize,
+    phantom: PhantomData<&'a S>
+}
+
+unsafe impl<'a, S: BitStorage + 'a> Send for Iter<'a, S> {}
+unsafe impl<'a, S: BitStorage + 'a> Sync for Iter<'a, S> {}
+
+impl<'a, S: BitStorage + 'a> IntoIterator for &'a BitSliceMut<'a, S> {
+    type Item = bool;
+    type IntoIter = Iter<'a, S>;
+
+    fn into_iter(self) -> Iter<'a, S> {
+        self.iter()
+    }
+}
+
+impl<'a, S: BitStorage + 'a> Iterator for Iter<'a, S> {
+    type Item = bool;
+
+    fn next(&mut self) -> Option<bool> {
+        let remainder: S = num::cast(self.remainder_counter).unwrap();
+        let next = self.get_unchecked_by_data_index_and_remainder(self.data_index_counter, remainder);
+
+        if self.calculate_index() == self.capacity {
+            return None;
+        }
+
+        self.remainder_counter += 1;
+        if self.remainder_counter == S::storage_size() {
+            self.remainder_counter = 0;
+            self.data_index_counter += 1;
+        }
+
+        Some(next)
+    }
+}
+
+impl<'a, S: BitStorage + 'a> Iter<'a, S> {
+    #[inline]
+    fn get_unchecked_by_data_index_and_remainder(&self, data_index: usize, remainder: S) -> bool {
+        let element = unsafe { *self.pointer.offset(data_index as isize) };
+        (element & (S::one() << remainder)) != S::zero()
+    }
+
+    #[inline]
+    fn calculate_index(&self) -> usize {
+        (self.data_index_counter * S::storage_size()) + self.remainder_counter
     }
 }
 
@@ -522,5 +591,92 @@ mod tests {
         let mut vec_8_32: BitVector<u8> = BitVector::with_capacity(32, false);
         let mut slice = create_bitslice_mut_u8_16_from_bitvector_u8_32(&mut vec_8_32);
         slice.split_at_mut(4);
+    }
+
+    #[test]
+    fn test_iter() {
+        let mut vec_8_4 = BitVector::<u8>::with_capacity(4, false);
+        vec_8_4.set(0, true);
+        vec_8_4.set(3, true);
+
+        let (_, slice_8_4) = vec_8_4.split_at_mut(0);
+        let slice_8_4_iter_vec: Vec<_> = slice_8_4.iter().collect();
+        assert_eq!(slice_8_4_iter_vec, [true, false, false, true]);
+
+        let mut vec_8_8 = BitVector::<u8>::with_capacity(8, false);
+        vec_8_8.set(0, true);
+        vec_8_8.set(3, true);
+        vec_8_8.set(4, true);
+        vec_8_8.set(6, true);
+
+        let (_, slice_8_8) = vec_8_8.split_at_mut(0);
+        let slice_8_8_iter_vec: Vec<_> = slice_8_8.iter().collect();
+        assert_eq!(slice_8_8_iter_vec, [true, false, false, true, true, false, true, false]);
+
+        let mut vec_8_16 = BitVector::<u8>::with_capacity(16, false);
+        vec_8_16.set(0, true);
+        vec_8_16.set(3, true);
+        vec_8_16.set(4, true);
+        vec_8_16.set(6, true);
+        vec_8_16.set(9, true);
+        vec_8_16.set(10, true);
+        vec_8_16.set(11, true);
+        vec_8_16.set(13, true);
+
+        {
+            let (_, slice_8_16) = vec_8_16.split_at_mut(0);
+            let slice_8_16_iter_vec: Vec<_> = slice_8_16.iter().collect();
+            assert_eq!(slice_8_16_iter_vec, [true, false, false, true, true, false, true, false, false, true, true, true, false, true, false, false]);
+        }
+
+        let vec_8_16_iter_vec: Vec<_> = vec_8_16.iter().collect();
+        let (left, right) = vec_8_16.split_at_mut(8);
+        let left_plus_right_iter_vec: Vec<_> = left.iter().chain(right.iter()).collect();
+
+        assert_eq!(vec_8_16_iter_vec, left_plus_right_iter_vec);
+    }
+
+    #[test]
+    fn test_into_iter_on_reference() {
+        let mut vec_8_4 = BitVector::<u8>::with_capacity(4, false);
+        vec_8_4.set(0, true);
+        vec_8_4.set(3, true);
+
+        let (_, slice_8_4) = vec_8_4.split_at_mut(0);
+        let slice_8_4_iter_vec: Vec<_> = (&slice_8_4).into_iter().collect();
+        assert_eq!(slice_8_4_iter_vec, [true, false, false, true]);
+
+        let mut vec_8_8 = BitVector::<u8>::with_capacity(8, false);
+        vec_8_8.set(0, true);
+        vec_8_8.set(3, true);
+        vec_8_8.set(4, true);
+        vec_8_8.set(6, true);
+
+        let (_, slice_8_8) = vec_8_8.split_at_mut(0);
+        let slice_8_8_iter_vec: Vec<_> = (&slice_8_8).into_iter().collect();
+        assert_eq!(slice_8_8_iter_vec, [true, false, false, true, true, false, true, false]);
+
+        let mut vec_8_16 = BitVector::<u8>::with_capacity(16, false);
+        vec_8_16.set(0, true);
+        vec_8_16.set(3, true);
+        vec_8_16.set(4, true);
+        vec_8_16.set(6, true);
+        vec_8_16.set(9, true);
+        vec_8_16.set(10, true);
+        vec_8_16.set(11, true);
+        vec_8_16.set(13, true);
+
+        {
+            let (_, slice_8_16) = vec_8_16.split_at_mut(0);
+            let slice_8_16_iter_vec: Vec<_> = (&slice_8_16).into_iter().collect();
+            assert_eq!(slice_8_16_iter_vec, [true, false, false, true, true, false, true, false, false, true, true, true, false, true, false, false]);
+        }
+
+        let vec_8_16_iter_vec: Vec<_> = vec_8_16.iter().collect();
+        let (left, right) = vec_8_16.split_at_mut(8);
+        let left_iter = (&left).into_iter();
+        let left_plus_right_iter_vec: Vec<_> = left_iter.chain(&right).collect();
+
+        assert_eq!(vec_8_16_iter_vec, left_plus_right_iter_vec);
     }
 }
