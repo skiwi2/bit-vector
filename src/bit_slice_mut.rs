@@ -1,6 +1,5 @@
 use num;
 
-use std;
 use std::marker::PhantomData;
 use std::ops::Index;
 
@@ -38,12 +37,9 @@ impl<'a, S: BitStorage + 'a> BitSliceMut<'a, S> {
     pub fn set(&mut self, index: usize, value: bool) {
         self.panic_index_bounds(index);
         let (data_index, remainder) = S::compute_data_index_and_remainder(index);
-        //TODO check how efficient this is
         unsafe {
             let element_pointer = self.pointer.offset(data_index as isize);
-            let mut element = *element_pointer;
-            S::set(&mut element, remainder, value);
-            std::ptr::write(element_pointer, element);
+            S::set(&mut *element_pointer, remainder, value);
         }
     }
 
