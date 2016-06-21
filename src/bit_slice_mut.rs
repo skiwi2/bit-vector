@@ -37,16 +37,12 @@ impl<'a, S: BitStorage + 'a> BitSliceMut<'a, S> {
 
     pub fn set(&mut self, index: usize, value: bool) {
         self.panic_index_bounds(index);
-        let (data_index, remainder) = self.compute_data_index_and_remainder(index);
+        let (data_index, remainder) = S::compute_data_index_and_remainder(index);
+        //TODO check how efficient this is
         unsafe {
             let element_pointer = self.pointer.offset(data_index as isize);
             let mut element = *element_pointer;
-            if value {
-                element |= S::one() << remainder;
-            }
-            else {
-                element &= !(S::one() << remainder);
-            }
+            S::set(&mut element, remainder, value);
             std::ptr::write(element_pointer, element);
         }
     }
@@ -57,7 +53,7 @@ impl<'a, S: BitStorage + 'a> BitSliceMut<'a, S> {
 
     pub fn split_at(&self, index: usize) -> (BitSlice<S>, BitSlice<S>) {
         self.panic_index_not_on_storage_bound(index);
-        let data_index = self.compute_data_index(index);
+        let data_index = S::compute_data_index(index);
         let (capacity_left, capacity_right) = self.compute_capacities(index);
         let (pointer_left, pointer_right) = self.compute_pointers(data_index);
 
@@ -70,7 +66,7 @@ impl<'a, S: BitStorage + 'a> BitSliceMut<'a, S> {
 
     pub fn split_at_mut(&mut self, index: usize) -> (BitSliceMut<S>, BitSliceMut<S>) {
         self.panic_index_not_on_storage_bound(index);
-        let data_index = self.compute_data_index(index);
+        let data_index = S::compute_data_index(index);
         let (capacity_left, capacity_right) = self.compute_capacities(index);
         let (pointer_left, pointer_right) = self.compute_mut_pointers(data_index);
 
@@ -93,35 +89,14 @@ impl<'a, S: BitStorage + 'a> BitSliceMut<'a, S> {
 
     #[inline]
     fn get_unchecked(&self, index: usize) -> bool {
-        let (data_index, remainder) = self.compute_data_index_and_remainder(index);
+        let (data_index, remainder) = S::compute_data_index_and_remainder(index);
         self.get_unchecked_by_data_index_and_remainder(data_index, remainder)
     }
 
     #[inline]
     fn get_unchecked_by_data_index_and_remainder(&self, data_index: usize, remainder: S) -> bool {
         let element = unsafe { *self.pointer.offset(data_index as isize) };
-        (element & (S::one() << remainder)) != S::zero()
-    }
-
-    #[inline]
-    fn compute_data_index_and_remainder(&self, index: usize) -> (usize, S) {
-        let data_index = self.compute_data_index(index);
-        let remainder = self.compute_data_remainder(index);
-        (data_index, remainder)
-    }
-
-    #[inline]
-    fn compute_data_index(&self, index: usize) -> usize {
-        index / S::storage_size()
-    }
-
-    #[inline]
-    fn compute_data_remainder(&self, index: usize) -> S {
-        let remainder = index % S::storage_size();
-        // we know that remainder is always smaller or equal to the size that S can hold
-        // for example if S = u8 then remainder <= 2^8 - 1
-        let remainder: S = num::cast(remainder).unwrap();
-        remainder
+        S::get(&element, remainder)
     }
 
     #[inline]
@@ -217,7 +192,7 @@ impl<'a, S: BitStorage + 'a> Iter<'a, S> {
     #[inline]
     fn get_unchecked_by_data_index_and_remainder(&self, data_index: usize, remainder: S) -> bool {
         let element = unsafe { *self.pointer.offset(data_index as isize) };
-        (element & (S::one() << remainder)) != S::zero()
+        S::get(&element, remainder)
     }
 
     #[inline]
