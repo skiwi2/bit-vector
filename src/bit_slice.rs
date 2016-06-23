@@ -8,6 +8,7 @@ use BitStorage;
 use TRUE;
 use FALSE;
 
+#[derive(Debug)]
 pub struct BitSlice<'a, S: BitStorage + 'a> {
     pointer: *const S,
     capacity: usize,
@@ -113,6 +114,7 @@ impl<'a, S: BitStorage + 'a> Index<usize> for BitSlice<'a, S> {
     }
 }
 
+#[derive(Debug)]
 pub struct Iter<'a, S: BitStorage + 'a> {
     pointer: *const S,
     capacity: usize,
@@ -421,5 +423,19 @@ mod tests {
         let left_plus_right_iter_vec: Vec<_> = left_iter.chain(&right).collect();
 
         assert_eq!(vec_8_16_iter_vec, left_plus_right_iter_vec);
+    }
+
+    #[test]
+    fn test_derive_debug() {
+        let vec: BitVector<u32> = BitVector::with_capacity(32, true);
+        let (_, slice) = vec.split_at(0);
+        format!("{:?}", slice);
+    }
+
+    #[test]
+    fn test_derive_iter_debug() {
+        let vec: BitVector<u32> = BitVector::with_capacity(32, true);
+        let (_, slice) = vec.split_at(0);
+        format!("{:?}", slice.iter());
     }
 }

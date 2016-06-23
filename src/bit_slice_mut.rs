@@ -9,6 +9,7 @@ use BitSlice;
 use TRUE;
 use FALSE;
 
+#[derive(Debug)]
 pub struct BitSliceMut<'a, S: BitStorage + 'a> {
     pointer: *mut S,
     capacity: usize,
@@ -143,6 +144,7 @@ impl<'a, S: BitStorage + 'a> Index<usize> for BitSliceMut<'a, S> {
     }
 }
 
+#[derive(Debug)]
 pub struct Iter<'a, S: BitStorage + 'a> {
     pointer: *mut S,
     capacity: usize,
@@ -649,5 +651,19 @@ mod tests {
         let left_plus_right_iter_vec: Vec<_> = left_iter.chain(&right).collect();
 
         assert_eq!(vec_8_16_iter_vec, left_plus_right_iter_vec);
+    }
+
+    #[test]
+    fn test_derive_debug() {
+        let mut vec: BitVector<u32> = BitVector::with_capacity(32, true);
+        let (_, slice) = vec.split_at_mut(0);
+        format!("{:?}", slice);
+    }
+
+    #[test]
+    fn test_derive_iter_debug() {
+        let mut vec: BitVector<u32> = BitVector::with_capacity(32, true);
+        let (_, slice) = vec.split_at_mut(0);
+        format!("{:?}", slice.iter());
     }
 }

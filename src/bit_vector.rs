@@ -11,6 +11,7 @@ use FALSE;
 
 //TODO wait on custom DST on stable and deref BitVector into BitSlice resp BitSliceMut and implement non-structural changing methods on BitSlice/BitSliceMut
 
+#[derive(Debug)]
 pub struct BitVector<S: BitStorage> {
     data: Vec<S>,
     capacity: usize
@@ -132,6 +133,7 @@ impl<'a, S: BitStorage + 'a> IntoIterator for &'a BitVector<S> {
     }
 }
 
+#[derive(Debug)]
 pub struct Iter<'a, S: BitStorage + 'a> {
     data: &'a Vec<S>,
     capacity: usize,
@@ -533,5 +535,17 @@ mod tests {
 
         let vec_8_16_iter_vec: Vec<_> = (&vec_8_16).into_iter().collect();
         assert_eq!(vec_8_16_iter_vec, [true, false, false, true, true, false, true, false, false, true, true, true, false, true, false, false]);
+    }
+
+    #[test]
+    fn test_derive_debug() {
+        let vec: BitVector<u32> = BitVector::with_capacity(32, true);
+        format!("{:?}", vec);
+    }
+
+    #[test]
+    fn test_derive_iter_debug() {
+        let vec: BitVector<u32> = BitVector::with_capacity(32, true);
+        format!("{:?}", vec.iter());
     }
 }
