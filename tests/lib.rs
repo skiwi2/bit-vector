@@ -1,7 +1,7 @@
 extern crate bit_vector;
 extern crate crossbeam;
 
-use bit_vector::BitVector;
+use bit_vector::{BitVector,BitSlice,BitSliceMut,BitStorage};
 
 #[test]
 fn test_parallel_immutable() {
@@ -110,7 +110,7 @@ fn test_parallel_mutable() {
 	let mut vec: BitVector<u8> = BitVector::with_capacity(32, false);
 
 	{
-		let (mut left, mut right) = vec.split_at_mut(16);
+		let (left, right) = vec.split_at_mut(16);
 
 		let (mut first, mut second) = left.split_at_mut(8);
 		let (mut third, mut fourth) = right.split_at_mut(8);
@@ -207,4 +207,54 @@ fn test_parallel_mutable() {
 	assert_eq!(vec[29], false);
 	assert_eq!(vec[30], false);
 	assert_eq!(vec[31], true);
+}
+
+#[test]
+fn test_reborrow_immutable() {
+    let mut vector: BitVector<u32> = BitVector::with_capacity(1000, false);
+    let indices = vec![128, 224, 320, 416, 512, 608, 704, 800, 928];
+
+    let slices = split_into_bit_slices(&mut vector, &indices);
+    assert_eq!(slices.len(), 10);
+}
+
+fn split_into_bit_slices<'a, S: BitStorage>(bit_vector: &'a mut BitVector<S>, indices: &[usize]) -> Vec<BitSlice<'a, S>> {
+    let mut bit_slices = vec![];
+
+    bit_slices.push(bit_vector.split_at(0).1);
+    let mut split_indices = 0;
+    for index in indices {
+        let last_slice = bit_slices.pop().unwrap();
+        let (new_slice, remainder) = last_slice.split_at(index - split_indices);
+        split_indices = *index;
+        bit_slices.push(new_slice);
+        bit_slices.push(remainder);
+    }
+
+    bit_slices
+}
+
+#[test]
+fn test_reborrow_mutable() {
+    let mut vector: BitVector<u32> = BitVector::with_capacity(1000, false);
+    let indices = vec![128, 224, 320, 416, 512, 608, 704, 800, 928];
+
+    let slices = split_into_bit_slices_mut(&mut vector, &indices);
+    assert_eq!(slices.len(), 10);
+}
+
+fn split_into_bit_slices_mut<'a, S: BitStorage>(bit_vector: &'a mut BitVector<S>, indices: &[usize]) -> Vec<BitSliceMut<'a, S>> {
+    let mut bit_slices = vec![];
+
+    bit_slices.push(bit_vector.split_at_mut(0).1);
+    let mut split_indices = 0;
+    for index in indices {
+        let last_slice = bit_slices.pop().unwrap();
+        let (new_slice, remainder) = last_slice.split_at_mut(index - split_indices);
+        split_indices = *index;
+        bit_slices.push(new_slice);
+        bit_slices.push(remainder);
+    }
+
+    bit_slices
 }

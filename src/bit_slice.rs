@@ -38,7 +38,7 @@ impl<'a, S: BitStorage + 'a> BitSlice<'a, S> {
         self.capacity
     }
 
-    pub fn split_at(&self, index: usize) -> (BitSlice<S>, BitSlice<S>) {
+    pub fn split_at(self, index: usize) -> (BitSlice<'a, S>, BitSlice<'a, S>) {
         self.panic_index_not_on_storage_bound(index);
         let data_index = S::compute_data_index(index);
         let (capacity_left, capacity_right) = self.compute_capacities(index);
@@ -48,6 +48,14 @@ impl<'a, S: BitStorage + 'a> BitSlice<'a, S> {
             let left = BitSlice::from_pointer(pointer_left, capacity_left);
             let right = BitSlice::from_pointer(pointer_right, capacity_right);
             (left, right)
+        }
+    }
+
+    pub fn reborrow<'b>(&'b self) -> BitSlice<'b, S> {
+        BitSlice {
+            pointer: self.pointer,
+            capacity: self.capacity,
+            phantom: self.phantom
         }
     }
 
@@ -340,6 +348,38 @@ mod tests {
         let vec_8_32: BitVector<u8> = BitVector::with_capacity(32, false);
         let slice = create_bitslice_u8_16_from_bitvector_u8_32(&vec_8_32);
         slice.split_at(4);
+    }
+
+    #[test]
+    fn test_reborrow() {
+        let mut vec_8_32: BitVector<u8> = BitVector::with_capacity(32, false);
+
+        vec_8_32.set(1, true);
+        vec_8_32.set(3, true);
+        vec_8_32.set(5, true);
+        vec_8_32.set(7, true);
+        vec_8_32.set(11, true);
+        vec_8_32.set(13, true);
+
+        let (_, slice) = vec_8_32.split_at(0);
+        let reborrow = slice.reborrow();
+
+        assert_eq!(reborrow[0], false);
+        assert_eq!(reborrow[1], true);
+        assert_eq!(reborrow[2], false);
+        assert_eq!(reborrow[3], true);
+        assert_eq!(reborrow[4], false);
+        assert_eq!(reborrow[5], true);
+        assert_eq!(reborrow[6], false);
+        assert_eq!(reborrow[7], true);
+        assert_eq!(reborrow[8], false);
+        assert_eq!(reborrow[9], false);
+        assert_eq!(reborrow[10], false);
+        assert_eq!(reborrow[11], true);
+        assert_eq!(reborrow[12], false);
+        assert_eq!(reborrow[13], true);
+        assert_eq!(reborrow[14], false);
+        assert_eq!(reborrow[15], false);
     }
 
     #[test]
