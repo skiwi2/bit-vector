@@ -13,7 +13,7 @@ use FALSE;
 pub struct BitSliceMut<'a, S: BitStorage + 'a> {
     pointer: *mut S,
     capacity: usize,
-    phantom: PhantomData<&'a S>
+    phantom: PhantomData<&'a mut S>
 }
 
 unsafe impl<'a, S: BitStorage + 'a> Send for BitSliceMut<'a, S> {}
